@@ -11,7 +11,15 @@ import (
 
 const timeout = 1 * time.Second
 
-type Address struct {
+type AddressBrasilAPI struct {
+	Cep        string `json:"cep"`
+	Logradouro string `json:"street"`
+	Bairro     string `json:"neighborhood"`
+	Cidade     string `json:"city"`
+	UF         string `json:"state"`
+}
+
+type AddressViacep struct {
 	Cep        string `json:"cep"`
 	Logradouro string `json:"logradouro"`
 	Bairro     string `json:"bairro"`
@@ -27,12 +35,12 @@ func main() {
 	wg.Add(2)
 
 	// Canal para receber o resultado da API 1
-	ch1 := make(chan *Address, 1)
+	ch1 := make(chan *AddressBrasilAPI, 1)
 
 	// Goroutine para a primeira API
 	go func() {
 		defer wg.Done()
-		result, err := fetchFromAPI1(cep)
+		result, err := fetchFromBrasilAPI(cep)
 		if err != nil {
 			fmt.Println("Erro na API 1:", err)
 			return
@@ -41,12 +49,12 @@ func main() {
 	}()
 
 	// Canal para receber o resultado da API 2
-	ch2 := make(chan *Address, 1)
+	ch2 := make(chan *AddressViacep, 1)
 
 	// Goroutine para a segunda API
 	go func() {
 		defer wg.Done()
-		result, err := fetchFromAPI2(cep)
+		result, err := fetchFromViacep(cep)
 		if err != nil {
 			fmt.Println("Erro na API 2:", err)
 			return
@@ -58,10 +66,10 @@ func main() {
 	select {
 	case result := <-ch1:
 		fmt.Println("Resultado da API 1:")
-		displayResult(result, "API 1")
+		displayResultBrasilAPI(result, "API 1")
 	case result := <-ch2:
 		fmt.Println("Resultado da API 2:")
-		displayResult(result, "API 2")
+		displayResultViacep(result, "API 2")
 	case <-time.After(timeout):
 		fmt.Println("Timeout: nenhuma resposta dentro do tempo limite")
 	}
@@ -70,7 +78,7 @@ func main() {
 	wg.Wait()
 }
 
-func fetchFromAPI1(cep string) (*Address, error) {
+func fetchFromBrasilAPI(cep string) (*AddressBrasilAPI, error) {
 	url := "https://brasilapi.com.br/api/cep/v1/" + cep
 
 	client := http.Client{
@@ -88,7 +96,7 @@ func fetchFromAPI1(cep string) (*Address, error) {
 		return nil, err
 	}
 
-	var result Address
+	var result AddressBrasilAPI
 	err = json.Unmarshal(body, &result)
 	if err != nil {
 		return nil, err
@@ -97,7 +105,7 @@ func fetchFromAPI1(cep string) (*Address, error) {
 	return &result, nil
 }
 
-func fetchFromAPI2(cep string) (*Address, error) {
+func fetchFromViacep(cep string) (*AddressViacep, error) {
 	url := "http://viacep.com.br/ws/" + cep + "/json/"
 
 	client := http.Client{
@@ -116,7 +124,7 @@ func fetchFromAPI2(cep string) (*Address, error) {
 	}
 
 	fmt.Println(string(body))
-	var result Address
+	var result AddressViacep
 	err = json.Unmarshal(body, &result)
 	if err != nil {
 		return nil, err
@@ -125,7 +133,16 @@ func fetchFromAPI2(cep string) (*Address, error) {
 	return &result, nil
 }
 
-func displayResult(result *Address, apiName string) {
+func displayResultBrasilAPI(result *AddressBrasilAPI, apiName string) {
+	fmt.Printf("API: %s\n", apiName)
+	fmt.Printf("CEP: %s\n", result.Cep)
+	fmt.Printf("Logradouro: %s\n", result.Logradouro)
+	fmt.Printf("Bairro: %s\n", result.Bairro)
+	fmt.Printf("Cidade: %s\n", result.Cidade)
+	fmt.Printf("Estado: %s\n", result.UF)
+}
+
+func displayResultViacep(result *AddressViacep, apiName string) {
 	fmt.Printf("API: %s\n", apiName)
 	fmt.Printf("CEP: %s\n", result.Cep)
 	fmt.Printf("Logradouro: %s\n", result.Logradouro)
